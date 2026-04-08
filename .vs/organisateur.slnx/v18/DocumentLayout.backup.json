@@ -32,7 +32,7 @@
               "RelativeDocumentMoniker": "config.js",
               "ToolTip": "C:\\Users\\cz_st\\source\\repos\\organisateur\\config.js",
               "RelativeToolTip": "config.js",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAA8AAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAA1AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
               "WhenOpened": "2026-04-08T20:30:19.291Z",
               "EditorCaption": ""
@@ -47,7 +47,8 @@
               "RelativeToolTip": "firebase.js",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
-              "WhenOpened": "2026-04-08T20:30:14.473Z"
+              "WhenOpened": "2026-04-08T20:30:14.473Z",
+              "EditorCaption": ""
             }
           ]
         }

@@ -4,13 +4,13 @@
    ===================================================== */
 
 const FIREBASE_CONFIG = {
-  apiKey:            "uwu",
-  authDomain:        "VOTRE_PROJECT.firebaseapp.com",
-  projectId:         "VOTRE_PROJECT_ID",
-  storageBucket:     "VOTRE_PROJECT.appspot.com",
-  messagingSenderId: "VOTRE_SENDER_ID",
-  appId:             "VOTRE_APP_ID",
-  databaseURL:       "https://VOTRE_PROJECT-default-rtdb.europe-west1.firebasedatabase.app"
+    apiKey:            "AIzaSyDtnTY4Aknzrvd8eBUFliqRoON_EzKcNGo",
+    authDomain:        "organisateur-4cf4b.firebaseapp.com",
+    projectId:         "organisateur-4cf4b",
+    storageBucket:     "organisateur-4cf4b.firebasestorage.app",
+    messagingSenderId: "634266451933",
+    appId:             "1:634266451933:web:5f3d6d351ccb37ba168034",
+    databaseURL:       "https://organisateur-4cf4b-default-rtdb.europe-west1.firebasedatabase.app"
 };
 
 // Identifiant unique de votre espace (même valeur sur tous vos appareils)
