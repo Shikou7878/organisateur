@@ -4,7 +4,7 @@
    ===================================================== */
 
 const FIREBASE_CONFIG = {
-  apiKey:            "VOTRE_API_KEY",
+  apiKey:            "uwu",
   authDomain:        "VOTRE_PROJECT.firebaseapp.com",
   projectId:         "VOTRE_PROJECT_ID",
   storageBucket:     "VOTRE_PROJECT.appspot.com",
