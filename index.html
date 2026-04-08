@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mon Organisateur</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/components.css" />
+</head>
+<body>
+
+  <!-- SYNC BANNER -->
+  <div id="sync-banner" class="loading">Connexion à Firebase…</div>
+
+  <!-- SETUP MODAL -->
+  <div id="setup-modal">
+    <div class="modal-box">
+      <div class="modal-title">Configuration Firebase</div>
+      <div class="modal-sub">Firebase permet de synchroniser vos données entre tous vos appareils en temps réel — gratuitement. Suivez ces étapes une seule fois :</div>
+
+      <div class="step-block"><strong>Étape 1</strong> — Allez sur <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> et connectez-vous avec votre compte Google.</div>
+      <div class="step-block"><strong>Étape 2</strong> — Cliquez <em>Ajouter un projet</em>, donnez-lui un nom (ex: <em>mon-organisateur</em>), désactivez Google Analytics si proposé, puis créez.</div>
+      <div class="step-block"><strong>Étape 3</strong> — Dans le menu à gauche, allez dans <em>Realtime Database</em> → <em>Créer une base de données</em> → choisissez <em>europe-west1</em> → mode <em>test</em>.</div>
+      <div class="step-block"><strong>Étape 4</strong> — Revenez à l'accueil du projet, cliquez sur l'icône <em>&lt;/&gt; Web</em>, donnez un nom à l'app, puis copiez les valeurs <em>firebaseConfig</em> dans les champs ci-dessous.</div>
+
+      <div class="config-field"><label>apiKey</label><input type="text" id="cfg-apiKey" placeholder="AIzaSy..." /></div>
+      <div class="config-field"><label>projectId</label><input type="text" id="cfg-projectId" placeholder="mon-organisateur-xxxxx" /></div>
+      <div class="config-field"><label>appId</label><input type="text" id="cfg-appId" placeholder="1:123456:web:abcdef" /></div>
+      <div class="config-field"><label>messagingSenderId</label><input type="text" id="cfg-senderId" placeholder="123456789" /></div>
+      <div class="config-field">
+        <label>Identifiant de votre espace <span style="color:var(--faint);font-weight:400;">(même valeur sur tous vos appareils)</span></label>
+        <input type="text" id="cfg-userkey" placeholder="ex: marie-dupont" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn" onclick="skipFirebase()">Utiliser sans synchronisation</button>
+        <button class="btn btn-primary" onclick="saveFirebaseConfig()">Connecter Firebase</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell">
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <div class="logo">Mon<br><span>Organisateur</span></div>
+      <div class="nav-item active" onclick="showPage('tasks',this)"><span class="nav-icon">✓</span> Tâches</div>
+      <div class="nav-item" onclick="showPage('planner',this)"><span class="nav-icon">◷</span> Planificateur</div>
+      <div class="nav-item" onclick="showPage('agenda',this)"><span class="nav-icon">📅</span> Agenda</div>
+      <div class="nav-item" onclick="showPage('recur',this)"><span class="nav-icon">↻</span> Récurrences</div>
+      <div class="nav-item" onclick="showPage('matrix',this)"><span class="nav-icon">⊞</span> Priorités</div>
+      <div class="sidebar-bottom">
+        <div class="date-chip" id="date-chip"></div>
+        <div class="sync-status" id="sync-status">—</div>
+        <button class="btn" style="font-size:.75rem;padding:6px 10px;" onclick="openSetup()">⚙ Config Firebase</button>
+      </div>
+    </nav>
+
+    <main class="main">
+
+      <!-- PAGE : TÂCHES -->
+      <div class="page active" id="page-tasks">
+        <div class="page-header">
+          <h1 class="page-title">Tâches du jour</h1>
+          <span class="page-sub" id="tasks-subtitle">0 tâche</span>
+        </div>
+        <div class="stats-row">
+          <div class="stat"><div class="stat-val" id="s-total">0</div><div class="stat-label">total</div></div>
+          <div class="stat"><div class="stat-val" id="s-done">0</div><div class="stat-label">complétées</div></div>
+          <div class="stat"><div class="stat-val" id="s-left">0</div><div class="stat-label">restantes</div></div>
+          <div class="stat"><div class="stat-val" id="s-time">0 min</div><div class="stat-label">temps estimé</div></div>
+        </div>
+        <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+        <div class="add-form">
+          <div class="form-row">
+            <input type="text" id="task-input" placeholder="Nouvelle tâche..." />
+            <select id="task-priority">
+              <option value="urgent">🔴 Urgent</option>
+              <option value="important" selected>🟡 Important</option>
+              <option value="normal">🟢 Normal</option>
+            </select>
+            <select id="task-duration">
+              <option value="15">15 min</option>
+              <option value="25" selected>25 min</option>
+              <option value="45">45 min</option>
+              <option value="60">1 heure</option>
+              <option value="90">1h30</option>
+              <option value="120">2 heures</option>
+            </select>
+            <button class="btn btn-primary" onclick="addTask()">+ Ajouter</button>
+          </div>
+        </div>
+        <div id="task-list"></div>
+      </div>
+
+      <!-- PAGE : PLANIFICATEUR -->
+      <div class="page" id="page-planner">
+        <div class="page-header">
+          <h1 class="page-title">Planificateur</h1>
+          <span class="page-sub" id="planner-date-label"></span>
+        </div>
+        <div class="planner-toolbar">
+          <label>Date :</label>
+          <input type="date" id="planner-date" onchange="onPlannerDateChange()" style="min-width:150px;" />
+          <span class="hint-text">Glissez une tâche sur un créneau · ⊘ pour bloquer une heure</span>
+        </div>
+        <div class="planner-layout">
+          <div class="pool-panel">
+            <div class="group-label" style="margin-bottom:8px;">Tâches à placer</div>
+            <div id="planner-pool"></div>
+          </div>
+          <div class="planner-grid" id="planner-wrap"></div>
+        </div>
+      </div>
+
+      <!-- PAGE : AGENDA -->
+      <div class="page" id="page-agenda">
+        <div class="page-header">
+          <h1 class="page-title">Agenda</h1>
+          <span class="page-sub">Planifiez à des dates futures — transfert auto vers le planificateur</span>
+        </div>
+        <div class="add-form">
+          <div class="form-section-title">Ajouter une tâche à une date future</div>
+          <div class="form-row">
+            <input type="text" id="agenda-input" placeholder="Tâche..." />
+            <select id="agenda-priority">
+              <option value="urgent">🔴 Urgent</option>
+              <option value="important" selected>🟡 Important</option>
+              <option value="normal">🟢 Normal</option>
+            </select>
+            <select id="agenda-duration">
+              <option value="15">15 min</option>
+              <option value="25" selected>25 min</option>
+              <option value="45">45 min</option>
+              <option value="60">1 heure</option>
+              <option value="90">1h30</option>
+              <option value="120">2 heures</option>
+            </select>
+            <input type="date" id="agenda-date" />
+            <button class="btn btn-primary" onclick="addAgendaTask()">+ Ajouter</button>
+          </div>
+        </div>
+        <div class="agenda-nav">
+          <button class="btn" onclick="weekOffset(-1)">← Précédente</button>
+          <span class="nav-range-label" id="agenda-range"></span>
+          <button class="btn" onclick="weekOffset(1)">Suivante →</button>
+          <button class="btn" onclick="weekOffset(0)">Aujourd'hui</button>
+        </div>
+        <div id="agenda-list"></div>
+      </div>
+
+      <!-- PAGE : RÉCURRENCES -->
+      <div class="page" id="page-recur">
+        <div class="page-header">
+          <h1 class="page-title">Tâches récurrentes</h1>
+          <span class="page-sub">Générées automatiquement chaque jour, semaine ou mois</span>
+        </div>
+        <div class="add-form">
+          <div class="form-section-title">Créer une tâche récurrente</div>
+          <div class="form-row">
+            <input type="text" id="recur-input" placeholder="Nom de la tâche..." />
+            <select id="recur-priority">
+              <option value="urgent">🔴 Urgent</option>
+              <option value="important" selected>🟡 Important</option>
+              <option value="normal">🟢 Normal</option>
+            </select>
+            <select id="recur-duration">
+              <option value="15">15 min</option>
+              <option value="25" selected>25 min</option>
+              <option value="45">45 min</option>
+              <option value="60">1 heure</option>
+              <option value="90">1h30</option>
+              <option value="120">2 heures</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <select id="recur-freq">
+              <option value="daily">Chaque jour</option>
+              <option value="weekly" selected>Chaque semaine</option>
+              <option value="monthly">Chaque mois</option>
+            </select>
+            <select id="recur-weekday" style="min-width:140px;">
+              <option value="1">Le lundi</option><option value="2">Le mardi</option>
+              <option value="3">Le mercredi</option><option value="4">Le jeudi</option>
+              <option value="5">Le vendredi</option><option value="6">Le samedi</option>
+              <option value="0">Le dimanche</option>
+            </select>
+            <input type="date" id="recur-start" style="min-width:145px;" />
+            <button class="btn btn-primary" onclick="addRecurTask()">+ Créer</button>
+          </div>
+          <div style="font-size:.78rem;color:var(--faint);">La tâche apparaîtra automatiquement dans "Tâches du jour" aux dates correspondantes.</div>
+        </div>
+        <div class="recur-list" id="recur-list"></div>
+      </div>
+
+      <!-- PAGE : MATRICE -->
+      <div class="page" id="page-matrix">
+        <div class="page-header">
+          <h1 class="page-title">Matrice d'Eisenhower</h1>
+          <span class="page-sub">Priorisez selon l'urgence et l'importance</span>
+        </div>
+        <div class="matrix-axis"><div class="axis-label">← Urgent</div><div class="axis-label">Pas urgent →</div></div>
+        <div class="matrix-grid" id="matrix-grid"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <!-- App scripts — ordre important -->
+  <script src="js/config.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/firebase.js"></script>
+  <script src="js/tasks.js"></script>
+  <script src="js/planner.js"></script>
+  <script src="js/agenda.js"></script>
+  <script src="js/recur.js"></script>
+  <script src="js/matrix.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>

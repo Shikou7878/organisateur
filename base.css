@@ -1,0 +1,67 @@
+/* =====================================================
+   BASE.CSS — Variables CSS, reset, typographie
+   C'est ici que vous modifiez les couleurs et polices
+   ===================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Fonds */
+  --bg:       #F7F5F0;
+  --surface:  #FFF;
+  --surface2: #F0EDE6;
+
+  /* Bordures */
+  --border:  rgba(0,0,0,.08);
+  --border2: rgba(0,0,0,.14);
+
+  /* Texte */
+  --text:  #1A1814;
+  --muted: #7A756B;
+  --faint: #B5B0A6;
+
+  /* Accent principal (vert) */
+  --accent:       #2E5D4B;
+  --accent-light: #E8F2EE;
+  --accent-mid:   #A8C8BC;
+
+  /* Priorité : Urgent (rouge) */
+  --urgent:    #C04A2A;
+  --urgent-bg: #FBF0EC;
+
+  /* Priorité : Important (jaune/or) */
+  --important:    #8A6200;
+  --important-bg: #FBF5E6;
+
+  /* Priorité : Normal (vert) */
+  --normal:    #2E5D4B;
+  --normal-bg: #E8F2EE;
+
+  /* Créneaux bloqués (gris) */
+  --greyed:      #ECEAE4;
+  --greyed-text: #B5B0A6;
+
+  /* Récurrences (violet) */
+  --recur:    #5B3FA6;
+  --recur-bg: #F0EDFB;
+
+  /* Rayons */
+  --radius:    12px;
+  --radius-sm: 7px;
+}
+
+html {
+  font-size: 15px;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-top: 32px; /* espace pour le sync banner fixe */
+}
