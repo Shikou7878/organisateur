@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mon Organisateur</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+<!-- ═══════════════════════════════════════════════════
+     CONFIGURATION FIREBASE  —  à remplir une seule fois
+     Suivez le guide en bas de page pour obtenir ces valeurs
+     ═══════════════════════════════════════════════════ -->
+<script>
+  const FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyDtnTY4Aknzrvd8eBUFliqRoON_EzKcNGo",
+    authDomain:        "organisateur-4cf4b.firebaseapp.com",
+    projectId:         "organisateur-4cf4b",
+    storageBucket:     "organisateur-4cf4b.firebasestorage.app",
+    messagingSenderId: "634266451933",
+    appId:             "1:634266451933:web:5f3d6d351ccb37ba168034",
+    databaseURL:       "https://organisateur-4cf4b-default-rtdb.europe-west1.firebasedatabase.app"
+  };
+  // Mettez un identifiant unique pour votre espace (ex: "marie" ou "equipe-marketing")
+  // Tous les appareils avec le même USER_KEY partagent les mêmes données
+  const USER_KEY = "mon-organisateur";
+</script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#F7F5F0; --surface:#FFF; --surface2:#F0EDE6;
+  --border:rgba(0,0,0,.08); --border2:rgba(0,0,0,.14);
+  --text:#1A1814; --muted:#7A756B; --faint:#B5B0A6;
+  --accent:#2E5D4B; --accent-light:#E8F2EE; --accent-mid:#A8C8BC;
+  --urgent:#C04A2A; --urgent-bg:#FBF0EC;
+  --important:#8A6200; --important-bg:#FBF5E6;
+  --normal:#2E5D4B; --normal-bg:#E8F2EE;
+  --greyed:#ECEAE4; --greyed-text:#B5B0A6;
+  --recur:#5B3FA6; --recur-bg:#F0EDFB;
+  --radius:12px; --radius-sm:7px;
+}
+html{font-size:15px;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* SYNC BANNER */
+#sync-banner{position:fixed;top:0;left:0;right:0;z-index:999;height:32px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:500;transition:all .3s;}
+#sync-banner.ok{background:#E8F2EE;color:#2E5D4B;}
+#sync-banner.error{background:#FBF0EC;color:#C04A2A;}
+#sync-banner.loading{background:#F0EDE6;color:#7A756B;}
+#sync-banner.hidden{display:none;}
+body{padding-top:32px;}
+
+.shell{display:flex;min-height:calc(100vh - 32px);}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);padding:1.75rem 1.25rem;display:flex;flex-direction:column;gap:.4rem;position:sticky;top:32px;height:calc(100vh - 32px);overflow-y:auto;flex-shrink:0;}
+.logo{font-family:'DM Serif Display',serif;font-size:1.3rem;color:var(--text);margin-bottom:1.25rem;line-height:1.2;}
+.logo span{color:var(--accent);font-style:italic;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:.87rem;color:var(--muted);transition:background .15s,color .15s;user-select:none;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:var(--accent-light);color:var(--accent);font-weight:500;}
+.nav-icon{font-size:.95rem;width:20px;text-align:center;}
+.sidebar-bottom{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;}
+.date-chip{font-size:.78rem;color:var(--muted);padding:6px 12px;background:var(--surface2);border-radius:20px;text-align:center;}
+.sync-status{font-size:.72rem;color:var(--faint);text-align:center;padding:4px 0;}
+
+.main{flex:1;padding:2rem 2.5rem;max-width:880px;}
+.page{display:none;}.page.active{display:block;}
+.page-header{margin-bottom:1.75rem;display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;}
+.page-title{font-family:'DM Serif Display',serif;font-size:1.8rem;color:var(--text);line-height:1;}
+.page-sub{font-size:.85rem;color:var(--faint);}
+
+.stats-row{display:flex;gap:10px;margin-bottom:1.75rem;flex-wrap:wrap;}
+.stat{flex:1;min-width:100px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.stat-val{font-size:1.6rem;font-weight:500;color:var(--text);line-height:1;}
+.stat-label{font-size:.75rem;color:var(--muted);margin-top:4px;}
+
+.progress-wrap{background:var(--surface2);border-radius:99px;height:5px;overflow:hidden;margin-bottom:1.75rem;}
+.progress-bar{height:100%;background:var(--accent);border-radius:99px;transition:width .4s ease;}
+
+.add-form{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.5rem;}
+.form-section-title{font-size:.82rem;color:var(--muted);font-weight:500;margin-bottom:10px;}
+.form-row{display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;}
+input[type=text],input[type=date],select{font-family:'DM Sans',sans-serif;font-size:.87rem;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);outline:none;transition:border .15s;}
+input[type=text]{flex:1;min-width:140px;}
+input[type=date]{min-width:145px;}
+select{min-width:125px;}
+input:focus,select:focus{border-color:var(--accent-mid);}
+.btn{font-family:'DM Sans',sans-serif;font-size:.85rem;padding:9px 18px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg);color:var(--muted);cursor:pointer;transition:background .15s;white-space:nowrap;}
+.btn:hover{background:var(--surface2);color:var(--text);}
+.btn-primary{border:none;background:var(--accent);color:#fff;font-weight:500;}
+.btn-primary:hover{opacity:.88;background:var(--accent);}
+
+.task-group{margin-bottom:1.25rem;}
+.group-label{font-size:.72rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:6px;padding-left:2px;}
+.task-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;display:flex;align-items:center;gap:10px;margin-bottom:5px;transition:box-shadow .15s;cursor:grab;}
+.task-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.check-circle{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border2);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,border .15s;}
+.check-circle.done{background:var(--accent);border-color:var(--accent);}
+.check-circle.done::after{content:'';width:7px;height:4px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg) translateY(-1px);display:block;}
+.task-name{flex:1;font-size:.9rem;color:var(--text);}
+.task-name.done{text-decoration:line-through;color:var(--faint);}
+.badge{font-size:.7rem;font-weight:500;padding:3px 8px;border-radius:99px;flex-shrink:0;white-space:nowrap;}
+.badge-urgent{background:var(--urgent-bg);color:var(--urgent);}
+.badge-important{background:var(--important-bg);color:var(--important);}
+.badge-normal{background:var(--normal-bg);color:var(--normal);}
+.badge-recur{background:var(--recur-bg);color:var(--recur);}
+.task-dur{font-size:.75rem;color:var(--faint);flex-shrink:0;min-width:34px;text-align:right;}
+.del-btn{width:22px;height:22px;border-radius:50%;border:none;background:none;color:var(--faint);cursor:pointer;font-size:1.1rem;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0;}
+.del-btn:hover{background:var(--surface2);color:var(--text);}
+.recur-icon{font-size:.8rem;flex-shrink:0;color:var(--recur);}
+.empty-state{text-align:center;padding:2rem 1rem;color:var(--faint);font-size:.85rem;background:var(--surface);border:1px dashed var(--border2);border-radius:var(--radius);}
+
+/* PLANNER */
+.planner-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;}
+.planner-toolbar label{font-size:.82rem;color:var(--muted);white-space:nowrap;}
+.hint-text{font-size:.78rem;color:var(--faint);flex:1;}
+.planner-layout{display:flex;gap:16px;flex-wrap:wrap;}
+.pool-panel{width:220px;flex-shrink:0;}
+.planner-grid{flex:1;min-width:300px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.planner-row{display:flex;align-items:stretch;border-bottom:1px solid var(--border);min-height:50px;}
+.planner-row:last-child{border-bottom:none;}
+.planner-row.greyed{background:var(--greyed);}
+.hour-col{width:64px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;border-right:1px solid var(--border);background:var(--bg);}
+.planner-row.greyed .hour-col{background:var(--greyed);}
+.hour-label{font-size:.72rem;color:var(--faint);line-height:1;}
+.grey-btn{width:20px;height:20px;border-radius:4px;border:none;background:none;color:var(--faint);cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+.grey-btn:hover{background:var(--surface2);}
+.slot-col{flex:1;padding:6px 10px;display:flex;flex-direction:column;gap:4px;min-height:50px;transition:background .12s;}
+.slot-col.drag-over{background:var(--accent-light)!important;}
+.planner-row.greyed .slot-col{pointer-events:none;}
+.drop-hint{font-size:.73rem;color:var(--faint);font-style:italic;padding:4px 0;}
+.greyed-label{font-size:.73rem;color:var(--greyed-text);font-style:italic;padding:4px 0;}
+.slot-task{display:flex;align-items:center;gap:7px;border-radius:5px;padding:4px 8px;font-size:.8rem;font-weight:500;}
+.slot-task.priority-urgent{background:var(--urgent-bg);color:var(--urgent);border:1px solid rgba(192,74,42,.2);}
+.slot-task.priority-important{background:var(--important-bg);color:var(--important);border:1px solid rgba(138,98,0,.2);}
+.slot-task.priority-normal{background:var(--accent-light);color:var(--accent);border:1px solid rgba(46,93,75,.2);}
+.slot-task-name{flex:1;}
+.slot-task-dur{font-size:.7rem;opacity:.7;}
+.slot-remove{background:none;border:none;cursor:pointer;color:inherit;opacity:.5;font-size:1rem;line-height:1;padding:0;}
+.slot-remove:hover{opacity:1;}
+
+/* AGENDA */
+.agenda-nav{display:flex;align-items:center;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap;}
+.nav-range-label{font-size:.9rem;font-weight:500;color:var(--text);min-width:200px;text-align:center;}
+.agenda-day{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;overflow:hidden;}
+.agenda-day-header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface2);cursor:pointer;user-select:none;}
+.agenda-day-header:hover{background:var(--bg);}
+.agenda-day-date{font-size:.85rem;font-weight:500;color:var(--text);flex:1;}
+.agenda-day-date.today{color:var(--accent);}
+.agenda-day-count{font-size:.75rem;color:var(--faint);}
+.agenda-day-body{padding:6px 16px;}
+.agenda-task-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);}
+.agenda-task-item:last-child{border-bottom:none;}
+.agenda-empty{font-size:.82rem;color:var(--faint);padding:8px 0;font-style:italic;}
+
+/* MATRIX */
+.matrix-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.matrix-cell{border-radius:var(--radius);padding:1rem 1.1rem;min-height:120px;border:1px solid transparent;}
+.mc-q1{background:var(--urgent-bg);border-color:rgba(192,74,42,.15);}
+.mc-q2{background:var(--important-bg);border-color:rgba(138,98,0,.12);}
+.mc-q3{background:var(--normal-bg);border-color:rgba(46,93,75,.12);}
+.mc-q4{background:var(--surface2);border-color:var(--border);}
+.mc-head{font-size:.78rem;font-weight:500;margin-bottom:2px;}
+.mc-q1 .mc-head{color:var(--urgent);}.mc-q2 .mc-head{color:var(--important);}.mc-q3 .mc-head{color:var(--accent);}.mc-q4 .mc-head{color:var(--muted);}
+.mc-sub{font-size:.72rem;color:var(--faint);margin-bottom:10px;font-style:italic;}
+.mc-task{font-size:.8rem;color:var(--text);padding:2px 0;display:flex;align-items:center;gap:6px;}
+.mc-task::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0;opacity:.5;}
+.matrix-axis{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px;}
+.axis-label{font-size:.72rem;color:var(--faint);text-align:center;}
+
+/* RECURRENCES */
+.recur-list .recur-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;display:flex;align-items:center;gap:10px;margin-bottom:5px;}
+.recur-freq{font-size:.75rem;padding:3px 9px;border-radius:99px;background:var(--recur-bg);color:var(--recur);font-weight:500;flex-shrink:0;}
+
+/* SETUP MODAL */
+#setup-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;}
+#setup-modal.hidden{display:none;}
+.modal-box{background:var(--surface);border-radius:var(--radius);padding:2rem;max-width:540px;width:90%;max-height:90vh;overflow-y:auto;}
+.modal-title{font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:.5rem;}
+.modal-sub{font-size:.85rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.6;}
+.config-field{margin-bottom:12px;}
+.config-field label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;}
+.config-field input{width:100%;}
+.step-block{background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;font-size:.83rem;line-height:1.7;color:var(--text);}
+.step-block strong{color:var(--accent);}
+.step-block a{color:var(--accent);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1.5rem;flex-wrap:wrap;}
+
+@media(max-width:680px){
+  .shell{flex-direction:column;}
+  .sidebar{width:100%;height:auto;position:static;flex-direction:row;flex-wrap:wrap;padding:1rem;gap:6px;}
+  .logo{width:100%;margin-bottom:.5rem;}
+  .sidebar-bottom{display:none;}
+  .main{padding:1.25rem;}
+  .matrix-grid{grid-template-columns:1fr;}
+  .pool-panel{width:100%;}
+}
+</style>
+</head>
+<body>
+
+<!-- SYNC BANNER -->
+<div id="sync-banner" class="loading">Connexion à Firebase…</div>
+
+<!-- SETUP MODAL -->
+<div id="setup-modal">
+  <div class="modal-box">
+    <div class="modal-title">Configuration Firebase</div>
+    <div class="modal-sub">Firebase permet de synchroniser vos données entre tous vos appareils en temps réel — gratuitement. Suivez ces étapes une seule fois :</div>
+
+    <div class="step-block">
+      <strong>Étape 1</strong> — Allez sur <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> et connectez-vous avec votre compte Google.
+    </div>
+    <div class="step-block">
+      <strong>Étape 2</strong> — Cliquez <em>Ajouter un projet</em>, donnez-lui un nom (ex: <em>mon-organisateur</em>), désactivez Google Analytics si proposé, puis créez.
+    </div>
+    <div class="step-block">
+      <strong>Étape 3</strong> — Dans le menu à gauche, allez dans <em>Realtime Database</em> → <em>Créer une base de données</em> → choisissez <em>europe-west1</em> → mode <em>test</em> (vous pourrez sécuriser plus tard).
+    </div>
+    <div class="step-block">
+      <strong>Étape 4</strong> — Revenez à l'accueil du projet, cliquez sur l'icône <em>&lt;/&gt; Web</em>, donnez un nom à l'app, puis copiez les valeurs <em>firebaseConfig</em> dans les champs ci-dessous.
+    </div>
+
+    <div class="config-field"><label>apiKey</label><input type="text" id="cfg-apiKey" placeholder="AIzaSy..." /></div>
+    <div class="config-field"><label>projectId</label><input type="text" id="cfg-projectId" placeholder="mon-organisateur-xxxxx" /></div>
+    <div class="config-field"><label>appId</label><input type="text" id="cfg-appId" placeholder="1:123456:web:abcdef" /></div>
+    <div class="config-field"><label>messagingSenderId</label><input type="text" id="cfg-senderId" placeholder="123456789" /></div>
+    <div class="config-field"><label>Identifiant de votre espace <span style="color:var(--faint);font-weight:400;">(même valeur sur tous vos appareils)</span></label><input type="text" id="cfg-userkey" placeholder="ex: marie-dupont" /></div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="skipFirebase()">Utiliser sans synchronisation</button>
+      <button class="btn btn-primary" onclick="saveFirebaseConfig()">Connecter Firebase</button>
+    </div>
+  </div>
+</div>
+
+<div class="shell">
+  <nav class="sidebar">
+    <div class="logo">Mon<br><span>Organisateur</span></div>
+    <div class="nav-item active" onclick="showPage('tasks',this)"><span class="nav-icon">✓</span> Tâches</div>
+    <div class="nav-item" onclick="showPage('planner',this)"><span class="nav-icon">◷</span> Planificateur</div>
+    <div class="nav-item" onclick="showPage('agenda',this)"><span class="nav-icon">📅</span> Agenda</div>
+    <div class="nav-item" onclick="showPage('recur',this)"><span class="nav-icon">↻</span> Récurrences</div>
+    <div class="nav-item" onclick="showPage('matrix',this)"><span class="nav-icon">⊞</span> Priorités</div>
+    <div class="sidebar-bottom">
+      <div class="date-chip" id="date-chip"></div>
+      <div class="sync-status" id="sync-status">—</div>
+      <button class="btn" style="font-size:.75rem;padding:6px 10px;" onclick="openSetup()">⚙ Config Firebase</button>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- TÂCHES -->
+    <div class="page active" id="page-tasks">
+      <div class="page-header">
+        <h1 class="page-title">Tâches du jour</h1>
+        <span class="page-sub" id="tasks-subtitle">0 tâche</span>
+      </div>
+      <div class="stats-row">
+        <div class="stat"><div class="stat-val" id="s-total">0</div><div class="stat-label">total</div></div>
+        <div class="stat"><div class="stat-val" id="s-done">0</div><div class="stat-label">complétées</div></div>
+        <div class="stat"><div class="stat-val" id="s-left">0</div><div class="stat-label">restantes</div></div>
+        <div class="stat"><div class="stat-val" id="s-time">0 min</div><div class="stat-label">temps estimé</div></div>
+      </div>
+      <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+      <div class="add-form">
+        <div class="form-row">
+          <input type="text" id="task-input" placeholder="Nouvelle tâche..." />
+          <select id="task-priority"><option value="urgent">🔴 Urgent</option><option value="important" selected>🟡 Important</option><option value="normal">🟢 Normal</option></select>
+          <select id="task-duration"><option value="15">15 min</option><option value="25" selected>25 min</option><option value="45">45 min</option><option value="60">1 heure</option><option value="90">1h30</option><option value="120">2 heures</option></select>
+          <button class="btn btn-primary" onclick="addTask()">+ Ajouter</button>
+        </div>
+      </div>
+      <div id="task-list"></div>
+    </div>
+
+    <!-- PLANIFICATEUR -->
+    <div class="page" id="page-planner">
+      <div class="page-header">
+        <h1 class="page-title">Planificateur</h1>
+        <span class="page-sub" id="planner-date-label"></span>
+      </div>
+      <div class="planner-toolbar">
+        <label>Date :</label>
+        <input type="date" id="planner-date" onchange="onPlannerDateChange()" style="min-width:150px;" />
+        <span class="hint-text">Glissez une tâche sur un créneau · ⊘ pour bloquer une heure</span>
+      </div>
+      <div class="planner-layout">
+        <div class="pool-panel">
+          <div class="group-label" style="margin-bottom:8px;">Tâches à placer</div>
+          <div id="planner-pool"></div>
+        </div>
+        <div class="planner-grid" id="planner-wrap"></div>
+      </div>
+    </div>
+
+    <!-- AGENDA -->
+    <div class="page" id="page-agenda">
+      <div class="page-header">
+        <h1 class="page-title">Agenda</h1>
+        <span class="page-sub">Planifiez à des dates futures — transfert auto vers le planificateur</span>
+      </div>
+      <div class="add-form">
+        <div class="form-section-title">Ajouter une tâche à une date future</div>
+        <div class="form-row">
+          <input type="text" id="agenda-input" placeholder="Tâche..." />
+          <select id="agenda-priority"><option value="urgent">🔴 Urgent</option><option value="important" selected>🟡 Important</option><option value="normal">🟢 Normal</option></select>
+          <select id="agenda-duration"><option value="15">15 min</option><option value="25" selected>25 min</option><option value="45">45 min</option><option value="60">1 heure</option><option value="90">1h30</option><option value="120">2 heures</option></select>
+          <input type="date" id="agenda-date" />
+          <button class="btn btn-primary" onclick="addAgendaTask()">+ Ajouter</button>
+        </div>
+      </div>
+      <div class="agenda-nav">
+        <button class="btn" onclick="weekOffset(-1)">← Précédente</button>
+        <span class="nav-range-label" id="agenda-range"></span>
+        <button class="btn" onclick="weekOffset(1)">Suivante →</button>
+        <button class="btn" onclick="weekOffset(0)">Aujourd'hui</button>
+      </div>
+      <div id="agenda-list"></div>
+    </div>
+
+    <!-- RÉCURRENCES -->
+    <div class="page" id="page-recur">
+      <div class="page-header">
+        <h1 class="page-title">Tâches récurrentes</h1>
+        <span class="page-sub">Générées automatiquement chaque jour, semaine ou mois</span>
+      </div>
+      <div class="add-form">
+        <div class="form-section-title">Créer une tâche récurrente</div>
+        <div class="form-row">
+          <input type="text" id="recur-input" placeholder="Nom de la tâche..." />
+          <select id="recur-priority"><option value="urgent">🔴 Urgent</option><option value="important" selected>🟡 Important</option><option value="normal">🟢 Normal</option></select>
+          <select id="recur-duration"><option value="15">15 min</option><option value="25" selected>25 min</option><option value="45">45 min</option><option value="60">1 heure</option><option value="90">1h30</option><option value="120">2 heures</option></select>
+        </div>
+        <div class="form-row">
+          <select id="recur-freq">
+            <option value="daily">Chaque jour</option>
+            <option value="weekly" selected>Chaque semaine</option>
+            <option value="monthly">Chaque mois</option>
+          </select>
+          <select id="recur-weekday" style="min-width:140px;">
+            <option value="1">Le lundi</option><option value="2">Le mardi</option><option value="3">Le mercredi</option>
+            <option value="4">Le jeudi</option><option value="5">Le vendredi</option>
+            <option value="6">Le samedi</option><option value="0">Le dimanche</option>
+          </select>
+          <input type="date" id="recur-start" style="min-width:145px;" />
+          <button class="btn btn-primary" onclick="addRecurTask()">+ Créer</button>
+        </div>
+        <div style="font-size:.78rem;color:var(--faint);">La tâche apparaîtra automatiquement dans "Tâches du jour" aux dates correspondantes.</div>
+      </div>
+      <div class="recur-list" id="recur-list"></div>
+    </div>
+
+    <!-- MATRIX -->
+    <div class="page" id="page-matrix">
+      <div class="page-header">
+        <h1 class="page-title">Matrice d'Eisenhower</h1>
+        <span class="page-sub">Priorisez selon l'urgence et l'importance</span>
+      </div>
+      <div class="matrix-axis"><div class="axis-label">← Urgent</div><div class="axis-label">Pas urgent →</div></div>
+      <div class="matrix-grid" id="matrix-grid"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let tasks = [];
+let plannerData = {};
+let agendaTasks = [];
+let recurTasks = [];
+let agendaWeekStart = getWeekStart(new Date());
+let plannerDate = todayStr();
+let dragTaskId = null;
+let dragFromSlot = null;
+let db = null;
+let useFirebase = false;
+let userKey = USER_KEY;
+let lastSyncTime = null;
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function getWeekStart(d) {
+  const day = d.getDay(), diff = day===0?-6:1-day;
+  const m = new Date(d); m.setDate(d.getDate()+diff); m.setHours(0,0,0,0); return m;
+}
+function addDays(d,n) { const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function dateStr(d) { return d.toISOString().slice(0,10); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2); }
+
+// ══════════════════════════════════════════════
+// FIREBASE SETUP
+// ══════════════════════════════════════════════
+function getSavedConfig() {
+  try { return JSON.parse(localStorage.getItem('orga-fb-config')||'null'); } catch(e){ return null; }
+}
+function openSetup() { document.getElementById('setup-modal').classList.remove('hidden'); }
+function skipFirebase() {
+  localStorage.setItem('orga-fb-skip','1');
+  document.getElementById('setup-modal').classList.add('hidden');
+  useFirebase = false;
+  setBanner('Mode local — données sur cet appareil uniquement','error');
+  loadLocal(); renderAll();
+}
+function saveFirebaseConfig() {
+  const cfg = {
+    apiKey: document.getElementById('cfg-apiKey').value.trim(),
+    projectId: document.getElementById('cfg-projectId').value.trim(),
+    appId: document.getElementById('cfg-appId').value.trim(),
+    messagingSenderId: document.getElementById('cfg-senderId').value.trim(),
+    userKey: document.getElementById('cfg-userkey').value.trim() || 'mon-organisateur'
+  };
+  if (!cfg.apiKey || !cfg.projectId) { alert('Veuillez remplir au moins apiKey et projectId.'); return; }
+  localStorage.setItem('orga-fb-config', JSON.stringify(cfg));
+  localStorage.removeItem('orga-fb-skip');
+  document.getElementById('setup-modal').classList.add('hidden');
+  location.reload();
+}
+
+function initFirebase(cfg) {
+  try {
+    const fbConfig = {
+      apiKey: cfg.apiKey,
+      authDomain: cfg.projectId+'.firebaseapp.com',
+      projectId: cfg.projectId,
+      storageBucket: cfg.projectId+'.appspot.com',
+      messagingSenderId: cfg.messagingSenderId,
+      appId: cfg.appId,
+      databaseURL: 'https://'+cfg.projectId+'-default-rtdb.europe-west1.firebasedatabase.app'
+    };
+    firebase.initializeApp(fbConfig);
+    db = firebase.database();
+    userKey = cfg.userKey || 'mon-organisateur';
+    useFirebase = true;
+    setBanner('Connexion Firebase…','loading');
+    listenFirebase();
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    setBanner('Erreur Firebase — mode local activé','error');
+    loadLocal(); renderAll();
+  }
+}
+
+function listenFirebase() {
+  const ref = db.ref('users/'+userKey);
+  ref.on('value', snap => {
+    const data = snap.val() || {};
+    tasks = Object.values(data.tasks || {});
+    plannerData = data.plannerData || {};
+    agendaTasks = Object.values(data.agendaTasks || {});
+    recurTasks = Object.values(data.recurTasks || {});
+    lastSyncTime = new Date();
+    checkRecurrences();
+    checkAgendaTransfer();
+    renderAll();
+    setBanner('Synchronisé · '+lastSyncTime.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),'ok');
+    document.getElementById('sync-status').textContent = 'Sync '+lastSyncTime.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  }, err => {
+    setBanner('Erreur de synchronisation','error');
+  });
+}
+
+function setBanner(msg, type) {
+  const b = document.getElementById('sync-banner');
+  b.textContent = type==='ok'?'✓ '+msg : type==='error'?'⚠ '+msg:'⏳ '+msg;
+  b.className = type;
+  if (type==='ok') setTimeout(()=>b.classList.add('hidden'),4000);
+}
+
+async function saveToFirebase() {
+  if (!useFirebase || !db) { saveLocal(); return; }
+  setBanner('Sauvegarde…','loading');
+  try {
+    const toObj = arr => arr.reduce((o,t)=>{o[t.id]=t;return o;},{});
+    await db.ref('users/'+userKey).set({
+      tasks: toObj(tasks),
+      plannerData,
+      agendaTasks: toObj(agendaTasks),
+      recurTasks: toObj(recurTasks),
+      updatedAt: Date.now()
+    });
+  } catch(e) {
+    setBanner('Erreur lors de la sauvegarde','error');
+  }
+}
+
+// LOCAL FALLBACK
+function saveLocal() {
+  localStorage.setItem('orga-tasks3', JSON.stringify(tasks));
+  localStorage.setItem('orga-planner3', JSON.stringify(plannerData));
+  localStorage.setItem('orga-agenda3', JSON.stringify(agendaTasks));
+  localStorage.setItem('orga-recur3', JSON.stringify(recurTasks));
+}
+function loadLocal() {
+  tasks = JSON.parse(localStorage.getItem('orga-tasks3')||'[]');
+  plannerData = JSON.parse(localStorage.getItem('orga-planner3')||'{}');
+  agendaTasks = JSON.parse(localStorage.getItem('orga-agenda3')||'[]');
+  recurTasks = JSON.parse(localStorage.getItem('orga-recur3')||'[]');
+  checkRecurrences();
+  checkAgendaTransfer();
+}
+
+async function save() {
+  if (useFirebase) await saveToFirebase();
+  else { saveLocal(); }
+}
+
+// ══════════════════════════════════════════════
+// RECURRENCES — génération auto
+// ══════════════════════════════════════════════
+function checkRecurrences() {
+  const today = todayStr();
+  let changed = false;
+  recurTasks.forEach(rt => {
+    if (!rt.active) return;
+    // Determine if today matches
+    const d = new Date(today+'T12:00:00');
+    let match = false;
+    if (rt.freq === 'daily') match = true;
+    if (rt.freq === 'weekly' && d.getDay() == rt.weekday) match = true;
+    if (rt.freq === 'monthly' && d.getDate() == rt.monthday) match = true;
+    if (!match) return;
+    if (rt.startDate && today < rt.startDate) return;
+    // Check if already generated today
+    const alreadyExists = tasks.some(t => t.recurId === rt.id && t.generatedDate === today);
+    if (alreadyExists) return;
+    tasks.push({ id: uid(), name: rt.name, priority: rt.priority, duration: rt.duration, done: false, recurId: rt.id, generatedDate: today });
+    changed = true;
+  });
+  if (changed) save();
+}
+
+// ══════════════════════════════════════════════
+// AGENDA → PLANIFICATEUR auto-transfer
+// ══════════════════════════════════════════════
+function checkAgendaTransfer() {
+  const today = todayStr();
+  let changed = false;
+  agendaTasks.forEach(at => {
+    if (at.date !== today || at.transferred) return;
+    // Add to today's tasks if not already there
+    const exists = tasks.some(t => t.agendaId === at.id && t.generatedDate === today);
+    if (!exists) {
+      tasks.push({ id: uid(), name: at.name, priority: at.priority, duration: at.duration, done: false, agendaId: at.id, generatedDate: today });
+      at.transferred = true;
+      changed = true;
+    }
+  });
+  if (changed) save();
+}
+
+// ══════════════════════════════════════════════
+// NAV
+// ══════════════════════════════════════════════
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  el.classList.add('active');
+  if(name==='planner') renderPlanner();
+  if(name==='matrix') renderMatrix();
+  if(name==='agenda') renderAgenda();
+  if(name==='recur') renderRecur();
+}
+
+// ══════════════════════════════════════════════
+// TASKS
+// ══════════════════════════════════════════════
+function addTask() {
+  const input = document.getElementById('task-input');
+  const name = input.value.trim(); if(!name) return;
+  tasks.push({id:uid(),name,priority:document.getElementById('task-priority').value,duration:parseInt(document.getElementById('task-duration').value),done:false});
+  input.value=''; save(); renderTasks();
+}
+document.getElementById('task-input').addEventListener('keydown', e=>{ if(e.key==='Enter') addTask(); });
+function toggleTask(id){const t=tasks.find(t=>t.id==id);if(t){t.done=!t.done;save();renderTasks();}}
+function deleteTask(id){tasks=tasks.filter(t=>t.id!=id);save();renderTasks();}
+
+function renderTasks() {
+  const order={urgent:0,important:1,normal:2};
+  const sorted=[...tasks].sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;return order[a.priority]-order[b.priority];});
+  const total=tasks.length,done=tasks.filter(t=>t.done).length,left=total-done;
+  const timeLeft=tasks.filter(t=>!t.done).reduce((s,t)=>s+t.duration,0);
+  document.getElementById('s-total').textContent=total;
+  document.getElementById('s-done').textContent=done;
+  document.getElementById('s-left').textContent=left;
+  document.getElementById('s-time').textContent=timeLeft>=60?Math.floor(timeLeft/60)+'h'+(timeLeft%60?String(timeLeft%60).padStart(2,'0'):''):timeLeft+' min';
+  document.getElementById('tasks-subtitle').textContent=total+' tâche'+(total>1?'s':'');
+  document.getElementById('progress-bar').style.width=total?Math.round(done/total*100)+'%':'0%';
+  const list=document.getElementById('task-list');
+  if(!sorted.length){list.innerHTML='<div class="empty-state">Aucune tâche. Commencez par en ajouter une !</div>';return;}
+  const groups={urgent:[],important:[],normal:[],done:[]};
+  sorted.forEach(t=>{if(t.done)groups.done.push(t);else groups[t.priority].push(t);});
+  const labels={urgent:'Urgent',important:'Important',normal:'Normal',done:'Complétées'};
+  let html='';
+  for(const key of ['urgent','important','normal','done']){
+    if(!groups[key].length) continue;
+    html+=`<div class="task-group"><div class="group-label">${labels[key]}</div>`;
+    groups[key].forEach(t=>{
+      const isRecur=!!t.recurId, isAgenda=!!t.agendaId;
+      html+=`<div class="task-card" draggable="true" ondragstart="startDrag(event,'${t.id}',null)">
+        <div class="check-circle${t.done?' done':''}" onclick="toggleTask('${t.id}')"></div>
+        ${isRecur?'<span class="recur-icon" title="Tâche récurrente">↻</span>':''}
+        ${isAgenda?'<span class="recur-icon" title="Depuis l\'agenda" style="color:var(--accent);">📅</span>':''}
+        <div class="task-name${t.done?' done':''}">${esc(t.name)}</div>
+        ${!t.done?`<span class="badge badge-${t.priority}">${labels[t.priority]}</span>`:''}
+        <span class="task-dur">${t.duration}m</span>
+        <button class="del-btn" onclick="deleteTask('${t.id}')">×</button>
+      </div>`;
+    });
+    html+='</div>';
+  }
+  list.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════
+// PLANNER
+// ══════════════════════════════════════════════
+function getPlannerDay(dt){
+  if(!plannerData[dt]) plannerData[dt]={slots:{},greyed:[]};
+  if(!plannerData[dt].slots) plannerData[dt].slots={};
+  if(!plannerData[dt].greyed) plannerData[dt].greyed=[];
+  return plannerData[dt];
+}
+function onPlannerDateChange(){plannerDate=document.getElementById('planner-date').value;renderPlanner();}
+
+function renderPlanner(){
+  const MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const DAYS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+  const inp=document.getElementById('planner-date');
+  if(!inp.value) inp.value=plannerDate;
+  plannerDate=inp.value||todayStr();
+  const d=new Date(plannerDate+'T12:00:00');
+  document.getElementById('planner-date-label').textContent=DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()]+' '+d.getFullYear();
+  const dayData=getPlannerDay(plannerDate);
+  const placedIds=new Set();
+  Object.values(dayData.slots).forEach(arr=>arr.forEach(e=>placedIds.add(e.taskId)));
+
+  // Pool = tasks not placed + agenda tasks for this day not placed
+  const agendaForDay = agendaTasks.filter(at=>at.date===plannerDate&&!placedIds.has(at.id));
+  const pool=[...tasks.filter(t=>!t.done&&!placedIds.has(t.id)), ...agendaForDay];
+
+  const poolEl=document.getElementById('planner-pool');
+  poolEl.innerHTML=pool.length?pool.map(t=>`
+    <div class="task-card" draggable="true" ondragstart="startDrag(event,'${t.id}',null)" style="margin-bottom:5px;">
+      <div class="task-name" style="font-size:.85rem;">${esc(t.name)}</div>
+      <span class="badge badge-${t.priority}" style="font-size:.68rem;">${t.priority==='urgent'?'Urg':t.priority==='important'?'Imp':'Norm'}</span>
+      <span class="task-dur">${t.duration}m</span>
+    </div>`).join(''):
+    '<div class="empty-state" style="padding:1rem .75rem;font-size:.8rem;">Toutes les tâches sont placées.</div>';
+
+  const hours=Array.from({length:20},(_,i)=>i+4);
+  const allTaskPool=[...tasks,...agendaTasks];
+  document.getElementById('planner-wrap').innerHTML=hours.map(h=>{
+    const pad=n=>String(n).padStart(2,'0');
+    const isGreyed=dayData.greyed.includes(h);
+    const slotItems=dayData.slots[h]||[];
+    const tasksHtml=slotItems.map(e=>{
+      const t=allTaskPool.find(t=>t.id==e.taskId);if(!t)return'';
+      return`<div class="slot-task priority-${t.priority}" draggable="true" ondragstart="startDrag(event,'${t.id}',${h})">
+        <span class="slot-task-name">${esc(t.name)}</span>
+        <span class="slot-task-dur">${t.duration}m</span>
+        <button class="slot-remove" onclick="removeFromSlot(${h},'${t.id}')">×</button>
+      </div>`;
+    }).join('');
+    return`<div class="planner-row${isGreyed?' greyed':''}">
+      <div class="hour-col">
+        <span class="hour-label">${pad(h)}:00</span>
+        <button class="grey-btn" onclick="toggleGrey(${h})" title="${isGreyed?'Débloquer':'Bloquer'}">⊘</button>
+      </div>
+      <div class="slot-col" id="slot-${h}"
+        ondragover="onDragOver(event,${h})"
+        ondragleave="document.getElementById('slot-${h}').classList.remove('drag-over')"
+        ondrop="onDrop(event,${h})">
+        ${isGreyed?'<span class="greyed-label">créneau bloqué</span>':(tasksHtml||'<span class="drop-hint">déposer ici</span>')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function startDrag(e,taskId,fromSlot){dragTaskId=taskId;dragFromSlot=fromSlot;e.dataTransfer.effectAllowed='move';}
+function onDragOver(e,h){e.preventDefault();const dd=getPlannerDay(plannerDate);if(!dd.greyed.includes(h))document.getElementById('slot-'+h).classList.add('drag-over');}
+function onDrop(e,h){
+  e.preventDefault();
+  document.getElementById('slot-'+h).classList.remove('drag-over');
+  const dd=getPlannerDay(plannerDate);
+  if(dd.greyed.includes(h))return;
+  if(!dd.slots[h])dd.slots[h]=[];
+  if(dragFromSlot!==null&&dragFromSlot!==undefined){
+    const fh=parseInt(dragFromSlot);
+    if(dd.slots[fh])dd.slots[fh]=dd.slots[fh].filter(e=>e.taskId!=dragTaskId);
+  }
+  if(!dd.slots[h].find(e=>e.taskId==dragTaskId))dd.slots[h].push({taskId:dragTaskId});
+  save();renderPlanner();
+}
+function removeFromSlot(h,taskId){const dd=getPlannerDay(plannerDate);if(dd.slots[h])dd.slots[h]=dd.slots[h].filter(e=>e.taskId!=taskId);save();renderPlanner();}
+function toggleGrey(h){const dd=getPlannerDay(plannerDate);const idx=dd.greyed.indexOf(h);if(idx>=0)dd.greyed.splice(idx,1);else dd.greyed.push(h);save();renderPlanner();}
+
+// ══════════════════════════════════════════════
+// AGENDA
+// ══════════════════════════════════════════════
+function addAgendaTask(){
+  const input=document.getElementById('agenda-input');
+  const name=input.value.trim();if(!name)return;
+  const date=document.getElementById('agenda-date').value;if(!date){alert('Veuillez choisir une date.');return;}
+  agendaTasks.push({id:uid(),name,priority:document.getElementById('agenda-priority').value,duration:parseInt(document.getElementById('agenda-duration').value),date,done:false,transferred:false});
+  input.value='';save();renderAgenda();
+}
+document.getElementById('agenda-input').addEventListener('keydown',e=>{if(e.key==='Enter')addAgendaTask();});
+function weekOffset(n){if(n===0)agendaWeekStart=getWeekStart(new Date());else agendaWeekStart=addDays(agendaWeekStart,n*7);renderAgenda();}
+function toggleAgenda(id){const t=agendaTasks.find(t=>t.id==id);if(t){t.done=!t.done;save();renderAgenda();}}
+function deleteAgenda(id){agendaTasks=agendaTasks.filter(t=>t.id!=id);save();renderAgenda();}
+
+function renderAgenda(){
+  const DAYS=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+  const MONTHS=['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+  const weekDays=Array.from({length:7},(_,i)=>addDays(agendaWeekStart,i));
+  const to=weekDays[6],from=weekDays[0];
+  document.getElementById('agenda-range').textContent=from.getDate()+' '+MONTHS[from.getMonth()]+' – '+to.getDate()+' '+MONTHS[to.getMonth()]+' '+to.getFullYear();
+  const todayS=todayStr();
+  let html='';
+  weekDays.forEach((d,i)=>{
+    const ds=dateStr(d);
+    const dayTasks=agendaTasks.filter(t=>t.date===ds);
+    const isToday=ds===todayS,isPast=ds<todayS;
+    html+=`<div class="agenda-day">
+      <div class="agenda-day-header">
+        <span class="agenda-day-date${isToday?' today':''}" style="${isPast?'opacity:.5':''}">
+          ${DAYS[i]} ${d.getDate()} ${MONTHS[d.getMonth()]}${isToday?' — Aujourd\'hui':''}
+          ${isPast?'<span style="font-size:.72rem;color:var(--faint);margin-left:6px;">passé</span>':''}
+        </span>
+        <span class="agenda-day-count">${dayTasks.length} tâche${dayTasks.length!==1?'s':''}</span>
+      </div>
+      <div class="agenda-day-body">
+        ${dayTasks.length?dayTasks.map(t=>`<div class="agenda-task-item">
+          <div class="check-circle${t.done?' done':''}" onclick="toggleAgenda('${t.id}')"></div>
+          <div class="task-name${t.done?' done':''}" style="font-size:.88rem;">${esc(t.name)}</div>
+          ${t.transferred?'<span style="font-size:.7rem;color:var(--accent);" title="Transféré dans les tâches du jour">✓ transféré</span>':''}
+          <span class="badge badge-${t.priority}" style="font-size:.68rem;">${t.priority==='urgent'?'Urgent':t.priority==='important'?'Important':'Normal'}</span>
+          <span class="task-dur">${t.duration}m</span>
+          <button class="del-btn" onclick="deleteAgenda('${t.id}')">×</button>
+        </div>`).join(''):'<div class="agenda-empty">Aucune tâche</div>'}
+      </div>
+    </div>`;
+  });
+  // Future tasks beyond this week
+  const afterWeek=agendaTasks.filter(t=>t.date>dateStr(to)).sort((a,b)=>a.date.localeCompare(b.date));
+  if(afterWeek.length){
+    const byDate={};
+    afterWeek.forEach(t=>{if(!byDate[t.date])byDate[t.date]=[];byDate[t.date].push(t);});
+    html+=`<div style="margin-top:1.5rem;"><div class="group-label" style="margin-bottom:8px;">À venir (au-delà de cette semaine)</div>`;
+    Object.entries(byDate).forEach(([ds,ts])=>{
+      const d2=new Date(ds+'T12:00:00');
+      const dn=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'][d2.getDay()];
+      html+=`<div class="agenda-day"><div class="agenda-day-header">
+        <span class="agenda-day-date">${dn} ${d2.getDate()} ${MONTHS[d2.getMonth()]} ${d2.getFullYear()}</span>
+        <span class="agenda-day-count">${ts.length} tâche${ts.length!==1?'s':''}</span>
+      </div><div class="agenda-day-body">${ts.map(t=>`<div class="agenda-task-item">
+        <div class="check-circle${t.done?' done':''}" onclick="toggleAgenda('${t.id}')"></div>
+        <div class="task-name${t.done?' done':''}" style="font-size:.88rem;">${esc(t.name)}</div>
+        <span class="badge badge-${t.priority}" style="font-size:.68rem;">${t.priority==='urgent'?'Urgent':t.priority==='important'?'Important':'Normal'}</span>
+        <span class="task-dur">${t.duration}m</span>
+        <button class="del-btn" onclick="deleteAgenda('${t.id}')">×</button>
+      </div>`).join('')}</div></div>`;
+    });
+    html+='</div>';
+  }
+  document.getElementById('agenda-list').innerHTML=html;
+}
+
+// ══════════════════════════════════════════════
+// RÉCURRENCES
+// ══════════════════════════════════════════════
+function addRecurTask(){
+  const input=document.getElementById('recur-input');
+  const name=input.value.trim();if(!name)return;
+  const freq=document.getElementById('recur-freq').value;
+  const weekday=parseInt(document.getElementById('recur-weekday').value);
+  const startDate=document.getElementById('recur-start').value||todayStr();
+  const today=new Date(todayStr()+'T12:00:00');
+  recurTasks.push({
+    id:uid(),name,priority:document.getElementById('recur-priority').value,
+    duration:parseInt(document.getElementById('recur-duration').value),
+    freq,weekday,monthday:today.getDate(),startDate,active:true
+  });
+  input.value='';save();renderRecur();checkRecurrences();renderTasks();
+}
+document.getElementById('recur-input').addEventListener('keydown',e=>{if(e.key==='Enter')addRecurTask();});
+function toggleRecur(id){const r=recurTasks.find(r=>r.id==id);if(r){r.active=!r.active;save();renderRecur();}}
+function deleteRecur(id){recurTasks=recurTasks.filter(r=>r.id!=id);save();renderRecur();}
+
+function renderRecur(){
+  const FREQ={daily:'Chaque jour',weekly:'Chaque semaine',monthly:'Chaque mois'};
+  const WDAYS=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  const list=document.getElementById('recur-list');
+  if(!recurTasks.length){list.innerHTML='<div class="empty-state">Aucune tâche récurrente.</div>';return;}
+  list.innerHTML=recurTasks.map(r=>`
+    <div class="recur-item">
+      <div class="check-circle${r.active?'':' done'}" onclick="toggleRecur('${r.id}')" title="${r.active?'Désactiver':'Activer'}"></div>
+      <div class="task-name${r.active?'':' done'}">${esc(r.name)}</div>
+      <span class="recur-freq">${FREQ[r.freq]}${r.freq==='weekly'?' ('+WDAYS[r.weekday]+')':r.freq==='monthly'?' (le '+r.monthday+')':''}</span>
+      <span class="badge badge-${r.priority}" style="font-size:.68rem;">${r.priority==='urgent'?'Urgent':r.priority==='important'?'Important':'Normal'}</span>
+      <span class="task-dur">${r.duration}m</span>
+      <button class="del-btn" onclick="deleteRecur('${r.id}')">×</button>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════
+// MATRIX
+// ══════════════════════════════════════════════
+function renderMatrix(){
+  const q=[[],[],[],[]];
+  tasks.filter(t=>!t.done).forEach(t=>{if(t.priority==='urgent')q[0].push(t);else if(t.priority==='important')q[1].push(t);else q[2].push(t);});
+  const cells=[{cls:'mc-q1',head:'Urgent + important',sub:'À faire maintenant',tasks:q[0]},{cls:'mc-q2',head:'Important, pas urgent',sub:'À planifier',tasks:q[1]},{cls:'mc-q3',head:'Urgent, pas important',sub:'À déléguer',tasks:q[2]},{cls:'mc-q4',head:'Ni urgent ni important',sub:'À éliminer',tasks:q[3]}];
+  document.getElementById('matrix-grid').innerHTML=cells.map(c=>`<div class="matrix-cell ${c.cls}"><div class="mc-head">${c.head}</div><div class="mc-sub">${c.sub}</div>${c.tasks.length?c.tasks.map(t=>`<div class="mc-task">${esc(t.name)}</div>`).join(''):'<div style="font-size:.78rem;color:var(--faint);font-style:italic;">—</div>'}</div>`).join('');
+}
+
+function renderAll(){renderTasks();if(document.getElementById('page-planner').classList.contains('active'))renderPlanner();if(document.getElementById('page-matrix').classList.contains('active'))renderMatrix();if(document.getElementById('page-agenda').classList.contains('active'))renderAgenda();if(document.getElementById('page-recur').classList.contains('active'))renderRecur();}
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+function setDate(){
+  const d=new Date();
+  const DAYS=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  const MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  document.getElementById('date-chip').textContent=DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()];
+}
+
+document.getElementById('planner-date').value=todayStr();
+const tom=new Date();tom.setDate(tom.getDate()+1);
+document.getElementById('agenda-date').value=tom.toISOString().slice(0,10);
+setDate();
+
+// Decide: Firebase or local?
+const savedCfg=getSavedConfig();
+const skipped=localStorage.getItem('orga-fb-skip');
+if(savedCfg&&savedCfg.apiKey&&savedCfg.apiKey!=='VOTRE_API_KEY'){
+  document.getElementById('setup-modal').classList.add('hidden');
+  // pre-fill modal
+  document.getElementById('cfg-apiKey').value=savedCfg.apiKey||'';
+  document.getElementById('cfg-projectId').value=savedCfg.projectId||'';
+  document.getElementById('cfg-appId').value=savedCfg.appId||'';
+  document.getElementById('cfg-senderId').value=savedCfg.messagingSenderId||'';
+  document.getElementById('cfg-userkey').value=savedCfg.userKey||'';
+  initFirebase(savedCfg);
+} else if(skipped){
+  document.getElementById('setup-modal').classList.add('hidden');
+  setBanner('Mode local — données sur cet appareil uniquement','error');
+  loadLocal();renderAll();
+} else if(FIREBASE_CONFIG.apiKey!=='VOTRE_API_KEY'){
+  // Config hardcodée dans le fichier
+  document.getElementById('setup-modal').classList.add('hidden');
+  const cfg={...FIREBASE_CONFIG,userKey:USER_KEY};
+  initFirebase(cfg);
+} else {
+  // Show setup modal
+  setBanner('Configuration requise','error');
+}
+</script>
+</body>
+</html>
